@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { DownloadResult } from '../types';
-import { executionPath } from '../config';
 import { errorLogger, systemLogger } from '../logger';
 
 /**
@@ -17,7 +16,8 @@ export class HistoryManager {
    * ダウンロード履歴を初期化
    */
   constructor() {
-    this.historyPath = path.join(executionPath, 'downloadHistory.json');
+    // プロジェクトのルートディレクトリに履歴ファイルを保存
+    this.historyPath = path.join(process.cwd(), 'downloadHistory.json');
     this.history = this.loadHistory();
   }
   

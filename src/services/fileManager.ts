@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { FailedDownload, DownloadResult } from '../types';
-import { executionPath } from '../config';
 import { systemLogger } from '../logger';
 
 /**
@@ -16,7 +15,8 @@ export class FileManager {
    * データディレクトリを初期化
    */
   constructor() {
-    this.dataPath = path.join(executionPath, 'data');
+    // プロジェクトのルートディレクトリに data フォルダを作成
+    this.dataPath = path.join(process.cwd(), 'data');
     this.ensureDirectoryExists(this.dataPath);
   }
   

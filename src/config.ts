@@ -21,7 +21,10 @@ const launchOptions: LaunchOptions = {
  * 実行パスの取得
  * exeとnodeで実行パスを変える
  */
+// 実行パスの取得（exeの場合）とプロジェクトルートパスの取得
 const executionPath = path.resolve(process.pkg ? path.dirname(process.execPath) : __dirname);
+// プロジェクトのルートディレクトリを取得
+const rootPath = process.cwd();
 
 /**
  * 設定ファイルの読み込み
@@ -29,7 +32,7 @@ const executionPath = path.resolve(process.pkg ? path.dirname(process.execPath) 
 let config: Config;
 try {
   // 設定ファイルを読み込む
-  const rawConfig = toml.parse(fs.readFileSync(path.join(executionPath, 'config.toml'), 'utf8'));
+  const rawConfig = toml.parse(fs.readFileSync(path.join(rootPath, 'config.toml'), 'utf8'));
   
   // 型変換を行う
   config = {
@@ -80,4 +83,4 @@ try {
   };
 }
 
-export { launchOptions, executionPath, config };
+export { launchOptions, executionPath, rootPath, config };
