@@ -5,6 +5,7 @@ import { Contract, UploadResult } from './types';
 import { config, launchOptions, executionPath } from './config';
 import { systemLogger, errorLogger } from './logger';
 import { sendGmail } from './mail';
+import { getContractDetails } from './getContractDetails';
 import { BrowserService } from './services/browserService';
 import { DownloaderService } from './services/downloaderService';
 import { FileManager } from './services/fileManager';
@@ -151,6 +152,10 @@ async function runDownloader(
     
     // 契約詳細ページへの移動
     await browserService.navigateToContractDetail(frame, contract.linkArg);
+    
+    // 契約詳細情報を取得してコンソールに表示
+    const mainFrame = browserService.getMainFrame();
+    await getContractDetails(mainFrame, contract);
     
     // ダウンロードディレクトリの作成
     const downloadPath = fileManager.createContractDirectory(
