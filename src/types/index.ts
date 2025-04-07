@@ -11,6 +11,20 @@ export type EmailConfig = {
   to: string;
 };
 
+export type GoogleDriveConfig = {
+  uploadEnabled: boolean;
+  useServiceAccount: boolean;
+  // OAuth2認証用
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  refreshToken: string;
+  // サービスアカウント認証用
+  serviceAccountKeyPath: string;
+  // 共通
+  folderId: string;
+};
+
 export type DebugConfig = {
   debugEnabled: boolean;
   headless: boolean;
@@ -27,6 +41,7 @@ export type Config = {
   downloadTimeoutSec: number;
   pdfClickDelaySec: number;
   mail: EmailConfig;
+  googleDrive: GoogleDriveConfig;
   debug: DebugConfig;
 };
 
@@ -53,6 +68,17 @@ export type DownloadFiles = {
   notDownloaded: string[];
 };
 
+// Google Driveへのアップロード状態
+export type UploadStatus = 'pending' | 'success' | 'failed';
+
+// Google Driveへのアップロード結果
+export type UploadResult = {
+  fileName: string;
+  fileId?: string;
+  status: UploadStatus;
+  error?: string;
+};
+
 // ダウンロード結果の型定義（履歴管理用）
 export type DownloadResult = {
   contractId: string;
@@ -60,6 +86,7 @@ export type DownloadResult = {
   sectionName: string;
   downloaded: string[];
   notDownloaded: string[];
+  uploaded?: UploadResult[];
 };
 
 // ダウンロード失敗ファイルの型定義
@@ -68,4 +95,13 @@ export type FailedDownload = {
   contractName: string;
   sectionName: string;
   fileName: string;
+};
+
+// アップロード失敗ファイルの型定義
+export type FailedUpload = {
+  contractId: string;
+  contractName: string;
+  sectionName: string;
+  fileName: string;
+  error: string;
 };

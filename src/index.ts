@@ -1,7 +1,7 @@
 import { chromium, Browser } from 'playwright-core';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Contract } from './types';
+import { Contract, UploadResult } from './types';
 import { config, launchOptions, executionPath } from './config';
 import { systemLogger, errorLogger } from './logger';
 import { sendGmail } from './mail';
@@ -9,6 +9,7 @@ import { BrowserService } from './services/browserService';
 import { DownloaderService } from './services/downloaderService';
 import { FileManager } from './services/fileManager';
 import { HistoryManager } from './services/historyManager';
+import { GoogleDriveService } from './services/googleDriveService';
 
 /**
  * メイン処理
@@ -66,8 +67,15 @@ async function main() {
     const fileManager = new FileManager();
     const historyManager = new HistoryManager();
     
+    // Google Driveサービスの初期化（設定が有効な場合）
+    let googleDriveService: GoogleDriveService | undefined;
+    if (config.googleDrive.uploadEnabled) {
+      googleDriveService = new GoogleDriveService(config.googleDrive);
+      systemLogger.info('Google Driveサービスを初期化しました');
+    }
+    
     // メイン処理の実行
-    await runDownloader(browserService, fileManager, historyManager);
+    await runDownloader(browserService, fileManager, historyManager, googleDriveService);
   } catch (error) {
     errorLogger.error('致命的なエラー:', error);
   } finally {
@@ -88,7 +96,8 @@ async function main() {
 async function runDownloader(
   browserService: BrowserService,
   fileManager: FileManager,
-  historyManager: HistoryManager
+  historyManager: HistoryManager,
+  googleDriveService?: GoogleDriveService
 ) {
   // トップページへの移動
   const topPageSuccess = await browserService.navigateToTopPage();
@@ -134,6 +143,7 @@ async function runDownloader(
   // メール本文の初期化
   const today = new Date().toLocaleDateString();
   let emailText = `${today}のダウンロード結果\n\n`;
+  let uploadResults: { contractId: string; results: UploadResult[] }[] = [];
   
   // 各契約のPDFをダウンロード
   for (const contract of filteredContracts) {
@@ -167,6 +177,35 @@ async function runDownloader(
     
     historyManager.addToHistory(downloadResult);
     
+    // Google Driveへのアップロード（設定が有効な場合）
+    if (googleDriveService && config.googleDrive.uploadEnabled) {
+      systemLogger.info(`Google Driveへのアップロードを開始: ${contract.contractName}`);
+      
+      // ダウンロードしたファイルのパスを取得
+      const filePaths = downloadFiles.downloaded.map(fileName =>
+        path.join(downloadPath, fileName)
+      );
+      
+      // Google Driveへのアップロード
+      const results = await googleDriveService.uploadContractFiles(
+        contract.contractId,
+        contract.contractName,
+        contract.sectionName,
+        filePaths
+      );
+      
+      // アップロード結果を履歴に追加
+      historyManager.addUploadResults(contract.contractId, results);
+      
+      // アップロード結果を記録
+      uploadResults.push({ contractId: contract.contractId, results });
+      
+      // アップロード結果のログ出力
+      const successCount = results.filter(r => r.status === 'success').length;
+      const failedCount = results.filter(r => r.status === 'failed').length;
+      systemLogger.info(`Google Driveへのアップロード結果: 成功=${successCount}, 失敗=${failedCount}`);
+    }
+    
     // ログ出力
     systemLogger.info(
       contract.contractId,
@@ -187,6 +226,31 @@ async function runDownloader(
   
   // 履歴の保存
   historyManager.saveHistory();
+  
+  // Google Driveへのアップロード結果をメール本文に追加
+  if (uploadResults.length > 0) {
+    emailText += '\n\n***** Google Driveへのアップロード結果 *****\n\n';
+    
+    for (const { contractId, results } of uploadResults) {
+      const contract = historyManager.getHistory().find(c => c.contractId === contractId);
+      if (!contract) continue;
+      
+      emailText += `${contract.contractName} (${contractId})\n`;
+      
+      const successFiles = results.filter(r => r.status === 'success');
+      const failedFiles = results.filter(r => r.status === 'failed');
+      
+      if (successFiles.length > 0) {
+        emailText += '【アップロード成功】\n' + successFiles.map(r => '・' + r.fileName).join('\n') + '\n';
+      }
+      
+      if (failedFiles.length > 0) {
+        emailText += '【アップロード失敗】\n' + failedFiles.map(r => `・${r.fileName} (${r.error})`).join('\n') + '\n';
+      }
+      
+      emailText += '\n';
+    }
+  }
   
   // ファイルチェックが有効な場合は実行
   if (config.fileCheckEnabled) {
@@ -209,6 +273,72 @@ async function runDownloader(
   if (config.mail.sendEmailEnabled) {
     const subject = `岩手県入札情報DL結果(${today})`;
     await sendGmail(subject, emailText);
+  }
+}
+
+/**
+ * 既存のダウンロード済みファイルをGoogle Driveにアップロード
+ * 既にダウンロードされているが、まだアップロードされていないファイルをアップロードする
+ */
+async function uploadExistingFiles() {
+  try {
+    // 各サービスの初期化
+    const fileManager = new FileManager();
+    const historyManager = new HistoryManager();
+    
+    // Google Driveサービスの初期化
+    if (!config.googleDrive.uploadEnabled) {
+      systemLogger.info('Google Driveへのアップロードが無効になっています');
+      return;
+    }
+    
+    const googleDriveService = new GoogleDriveService(config.googleDrive);
+    
+    // アップロードが必要な契約を取得
+    const contractsToUpload = historyManager.getContractsToUpload();
+    
+    if (contractsToUpload.length === 0) {
+      systemLogger.info('アップロードが必要な契約はありません');
+      return;
+    }
+    
+    systemLogger.info(`${contractsToUpload.length}件の契約をアップロードします`);
+    
+    // 各契約のファイルをアップロード
+    for (const contract of contractsToUpload) {
+      // アップロードするファイルのパスを取得
+      const filePaths = historyManager.getFilesToUpload(contract.contractId, fileManager.getDataPath());
+      
+      if (filePaths.length === 0) {
+        systemLogger.warn(`契約 ${contract.contractId} にアップロードするファイルがありません`);
+        continue;
+      }
+      
+      systemLogger.info(`契約 ${contract.contractId} の ${filePaths.length} 件のファイルをアップロードします`);
+      
+      // Google Driveへのアップロード
+      const results = await googleDriveService.uploadContractFiles(
+        contract.contractId,
+        contract.contractName,
+        contract.sectionName,
+        filePaths
+      );
+      
+      // アップロード結果を履歴に追加
+      historyManager.addUploadResults(contract.contractId, results);
+      
+      // アップロード結果のログ出力
+      const successCount = results.filter(r => r.status === 'success').length;
+      const failedCount = results.filter(r => r.status === 'failed').length;
+      systemLogger.info(`Google Driveへのアップロード結果: 成功=${successCount}, 失敗=${failedCount}`);
+    }
+    
+    // 履歴の保存
+    historyManager.saveHistory();
+    
+    systemLogger.info('既存ファイルのアップロードが完了しました');
+  } catch (error) {
+    errorLogger.error('既存ファイルのアップロード中にエラーが発生しました:', error);
   }
 }
 

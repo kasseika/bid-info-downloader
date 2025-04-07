@@ -43,6 +43,22 @@ try {
     mail: {
       ...rawConfig.mail,
       sendEmailEnabled: stringToBoolean(rawConfig.mail.sendEmailEnabled)
+    },
+    googleDrive: rawConfig.googleDrive ? {
+      ...rawConfig.googleDrive,
+      uploadEnabled: stringToBoolean(rawConfig.googleDrive.uploadEnabled),
+      useServiceAccount: rawConfig.googleDrive.useServiceAccount !== undefined
+        ? stringToBoolean(rawConfig.googleDrive.useServiceAccount)
+        : false
+    } : {
+      uploadEnabled: false,
+      useServiceAccount: false,
+      clientId: '',
+      clientSecret: '',
+      redirectUri: '',
+      refreshToken: '',
+      serviceAccountKeyPath: '',
+      folderId: ''
     }
   } as Config;
   
@@ -75,6 +91,16 @@ try {
       user: "",
       pass: "",
       to: ""
+    },
+    googleDrive: {
+      uploadEnabled: false,
+      useServiceAccount: false,
+      clientId: '',
+      clientSecret: '',
+      redirectUri: '',
+      refreshToken: '',
+      serviceAccountKeyPath: '',
+      folderId: ''
     },
     debug: {
       debugEnabled: false,

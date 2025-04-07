@@ -40,6 +40,23 @@ user = "example@gmail.com"              # Gamilのuser名(xxx@gmail.com)
 pass = "yourapppassword"                # GoogleのAppパスワード
 to = "example@gmail.com"                # 送信先メールアドレス(複数設定の例: "email1@example.com, email2@example.coom")
 
+# Google Drive設定
+[googleDrive]
+uploadEnabled = false                 # Google Driveへのアップロードを有効にする (true or false)
+useServiceAccount = true              # サービスアカウントを使用する (true or false)
+
+# サービスアカウント認証用設定（useServiceAccount = true の場合に使用）
+serviceAccountKeyPath = ""            # サービスアカウントのキーファイルのパス（JSONファイル）
+
+# OAuth2認証用設定（useServiceAccount = false の場合に使用）
+clientId = ""                         # Google Cloud PlatformのクライアントID
+clientSecret = ""                     # Google Cloud Platformのクライアントシークレット
+redirectUri = "http://localhost"      # リダイレクトURI
+refreshToken = ""                     # リフレッシュトークン
+
+# 共通設定
+folderId = ""                         # アップロード先のフォルダID
+
 # debug用
 [debug]
 debugEnabled = false                  # debugモードを有効にする (true or false)

@@ -7,6 +7,7 @@
 - 岩手県入札情報公開サービスから特定の業務名を含む案件を検索
 - 設定したキーワードを含むPDFファイルを自動ダウンロード
 - ダウンロード結果をメールで通知（オプション）
+- ダウンロードしたファイルをGoogle Driveにアップロード（オプション）
 - ダウンロード履歴の管理
 
 ## 必要条件
@@ -64,6 +65,23 @@ cp config_example.toml config.toml
 - `pass`: GoogleのAppパスワード
 - `to`: 送信先メールアドレス
 
+Google Driveへのアップロードを使用する場合は、`[googleDrive]` セクションで以下の設定を行います：
+
+- `uploadEnabled`: Google Driveへのアップロードを有効にするかどうか
+- `useServiceAccount`: サービスアカウントを使用するかどうか（推奨）
+
+サービスアカウントを使用する場合（`useServiceAccount = true`）：
+- `serviceAccountKeyPath`: サービスアカウントのキーファイル（JSON）のパス
+
+OAuth2認証を使用する場合（`useServiceAccount = false`）：
+- `clientId`: Google Cloud PlatformのクライアントID
+- `clientSecret`: Google Cloud Platformのクライアントシークレット
+- `redirectUri`: リダイレクトURI
+- `refreshToken`: リフレッシュトークン
+
+共通設定：
+- `folderId`: アップロード先のフォルダID
+
 デバッグ設定は、`[debug]` セクションで行います：
 
 - `debugEnabled`: デバッグモードを有効にするかどうか
@@ -99,12 +117,14 @@ src/
 │   ├── browserService.ts   # ブラウザ操作関連
 │   ├── downloaderService.ts # ダウンロード処理
 │   ├── fileManager.ts      # ファイル管理
-│   └── historyManager.ts   # ダウンロード履歴管理
+│   ├── historyManager.ts   # ダウンロード履歴管理
+│   └── googleDriveService.ts # Google Driveアップロード
 ├── utils/                  # ユーティリティ関数
 │   └── helpers.ts          # 汎用ヘルパー関数
 ├── config.ts               # 設定管理
 ├── logger.ts               # ロギング
 ├── mail.ts                 # メール送信
+├── uploadToDrive.ts        # Google Driveアップロード
 └── index.ts                # エントリーポイント
 ```
 
@@ -132,3 +152,37 @@ ISC
 
 - このツールは個人的な利用を目的としています
 - サーバーに過度な負荷をかけないようにご注意ください
+
+## Google Driveサービスアカウントの設定方法
+
+1. [Google Cloud Console](https://console.cloud.google.com/)にアクセスし、プロジェクトを作成または選択します
+
+2. Google Drive APIを有効にします
+   - 「APIとサービス」→「ライブラリ」を選択
+   - 「Google Drive API」を検索して選択
+   - 「有効にする」をクリック
+
+3. サービスアカウントを作成します
+   - 「APIとサービス」→「認証情報」を選択
+   - 「認証情報を作成」→「サービスアカウント」を選択
+   - サービスアカウント名、説明を入力し、「作成して続行」をクリック
+   - 「ロールを選択」で「基本」→「編集者」を選択（または必要な権限を設定）
+   - 「完了」をクリック
+
+4. サービスアカウントのキーを作成します
+   - 作成したサービスアカウントの行をクリック
+   - 「キー」タブを選択
+   - 「鍵を追加」→「新しい鍵を作成」→「JSON」を選択
+   - キーファイル（JSON）がダウンロードされます
+
+5. Google Driveでフォルダを共有します
+   - Google Driveで、アップロード先のフォルダを作成または選択
+   - フォルダを右クリック→「共有」を選択
+   - サービスアカウントのメールアドレス（キーファイル内の`client_email`）を入力
+   - 「編集者」権限を付与して「送信」をクリック
+
+6. `config.toml`を設定します
+   - `uploadEnabled = true`に設定
+   - `useServiceAccount = true`に設定
+   - `serviceAccountKeyPath`にダウンロードしたキーファイルのパスを設定
+   - `folderId`にアップロード先のフォルダIDを設定（フォルダURLの末尾の部分）
