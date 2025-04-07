@@ -45,6 +45,7 @@ to = "example@gmail.com"                # 送信先メールアドレス(複数�
 uploadEnabled = false                 # Google Driveへのアップロードを有効にする (true or false)
 serviceAccountKeyPath = "./credentials.json" # サービスアカウントのキーファイルのパス（JSONファイル）
 folderId = ""                         # アップロード先のフォルダID
+spreadsheetId = ""                    # スプレッドシートID
 
 # debug用
 [debug]

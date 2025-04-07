@@ -152,9 +152,9 @@ async function runDownloader(
     
     // 契約詳細ページへの移動
     await browserService.navigateToContractDetail(frame, contract.linkArg);
-    
-    // 契約詳細情報を取得してコンソールに表示
+    // 契約詳細情報を取得してコンソールに表示し、スプレッドシートに書き込む
     const mainFrame = browserService.getMainFrame();
+    const contractDetails = await getContractDetails(mainFrame, contract);
     await getContractDetails(mainFrame, contract);
     
     // ダウンロードディレクトリの作成

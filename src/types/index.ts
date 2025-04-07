@@ -17,6 +17,8 @@ export type GoogleDriveConfig = {
   serviceAccountKeyPath: string;
   // アップロード先フォルダ
   folderId: string;
+  // スプレッドシートID
+  spreadsheetId?: string;
 };
 
 export type DebugConfig = {
@@ -98,4 +100,25 @@ export type FailedUpload = {
   sectionName: string;
   fileName: string;
   error: string;
+};
+
+// 契約詳細情報の型定義（スプレッドシート用）
+export type ContractDetails = {
+  年度?: string;
+  業務名?: string;
+  契約管理番号?: string;
+  入札方式?: string;
+  業種?: string;
+  業務場所?: string;
+  業務内容?: string;
+  公開日?: string;
+  参加受付開始?: string;
+  参加受付期限?: string;
+  入札締切日時?: string;
+  開札日?: string;
+  予定価格?: string;
+  発注等級?: string;
+  WTO条件付一般競争入札方式の型?: string;
+  備考?: string;
+  課所名?: string;
 };

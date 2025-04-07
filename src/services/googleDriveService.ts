@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import * as fs from 'fs';
 import * as path from 'path';
-import { GoogleDriveConfig, UploadResult, UploadStatus } from '../types';
+import { GoogleDriveConfig, UploadResult, UploadStatus, ContractDetails } from '../types';
 import { errorLogger, systemLogger } from '../logger';
 import { JWT } from 'google-auth-library';
 
@@ -11,6 +11,7 @@ import { JWT } from 'google-auth-library';
  */
 export class GoogleDriveService {
   private drive;
+  private sheets;
   private config: GoogleDriveConfig;
 
   /**
@@ -44,9 +45,10 @@ export class GoogleDriveService {
       errorLogger.error('サービスアカウント認証の初期化に失敗しました', error);
       throw new Error('サービスアカウント認証の初期化に失敗しました: ' + (error as Error).message);
     }
+this.drive = google.drive({ version: 'v3', auth });
+this.sheets = google.sheets({ version: 'v4', auth });
+}
 
-    this.drive = google.drive({ version: 'v3', auth });
-  }
 
   /**
    * ファイルをGoogle Driveにアップロード
@@ -201,5 +203,107 @@ export class GoogleDriveService {
     // ファイルをアップロード
     const uploadPromises = filePaths.map(filePath => this.uploadFile(filePath, folderId));
     return await Promise.all(uploadPromises);
+  }
+
+  /**
+   * スプレッドシートに契約情報を書き込む
+   * @param spreadsheetId スプレッドシートID
+   * @param sheetName シート名
+   * @param contractDetails 契約詳細情報
+   * @returns 書き込み結果（成功時はtrue、失敗時はfalse）
+   */
+  async writeContractToSheet(
+    spreadsheetId: string,
+    sheetName: string,
+    contractDetails: ContractDetails
+  ): Promise<boolean> {
+    try {
+      // スプレッドシートの列構造に合わせてデータを整形
+      const rowData = [
+        contractDetails.年度 || '',
+        contractDetails.業務名 || '',
+        contractDetails.業務名 || '', // 業務名が2列あるため同じ値を入れる
+        contractDetails.契約管理番号 || '',
+        contractDetails.入札方式 || '',
+        contractDetails.業種 || '',
+        contractDetails.業務場所 || '',
+        contractDetails.業務内容 || '',
+        contractDetails.公開日 || '',
+        contractDetails.参加受付開始 || '',
+        contractDetails.参加受付期限 || '',
+        contractDetails.入札締切日時 || '',
+        contractDetails.開札日 || '',
+        contractDetails.予定価格 || '',
+        contractDetails.発注等級 || '',
+        contractDetails.WTO条件付一般競争入札方式の型 || '',
+        contractDetails.備考 || '',
+        contractDetails.課所名 || ''
+      ];
+
+      // 契約管理番号で重複チェック
+      const contractId = contractDetails.契約管理番号;
+      if (!contractId) {
+        systemLogger.warn('契約管理番号がないため、スプレッドシートへの書き込みをスキップします');
+        return false;
+      }
+
+      // スプレッドシートからデータを取得して重複チェック
+      const existingData = await this.getSheetData(spreadsheetId, sheetName);
+      const duplicateRow = existingData.findIndex(row => row[3] === contractId); // D列（インデックス3）が契約管理番号
+
+      if (duplicateRow !== -1) {
+        systemLogger.info(`契約管理番号 ${contractId} は既にスプレッドシートに存在します（行: ${duplicateRow + 1}）`);
+        
+        // 既存の行を更新
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${sheetName}!A${duplicateRow + 1}:R${duplicateRow + 1}`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: [rowData]
+          }
+        });
+        
+        systemLogger.info(`契約管理番号 ${contractId} の情報を更新しました`);
+        return true;
+      }
+
+      // 新しい行を追加
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${sheetName}!A:R`,
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        requestBody: {
+          values: [rowData]
+        }
+      });
+
+      systemLogger.info(`契約管理番号 ${contractId} の情報をスプレッドシートに追加しました`);
+      return true;
+    } catch (error) {
+      errorLogger.error('スプレッドシートへの書き込みに失敗しました', error);
+      return false;
+    }
+  }
+
+  /**
+   * スプレッドシートのデータを取得
+   * @param spreadsheetId スプレッドシートID
+   * @param sheetName シート名
+   * @returns スプレッドシートのデータ
+   */
+  private async getSheetData(spreadsheetId: string, sheetName: string): Promise<string[][]> {
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!A:R`
+      });
+
+      return response.data.values || [];
+    } catch (error) {
+      errorLogger.error('スプレッドシートのデータ取得に失敗しました', error);
+      return [];
+    }
   }
 }

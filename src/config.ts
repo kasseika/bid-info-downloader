@@ -50,7 +50,8 @@ try {
     } : {
       uploadEnabled: false,
       serviceAccountKeyPath: '',
-      folderId: ''
+      folderId: '',
+      spreadsheetId: ''
     }
   } as Config;
   
@@ -87,7 +88,8 @@ try {
     googleDrive: {
       uploadEnabled: false,
       serviceAccountKeyPath: '',
-      folderId: ''
+      folderId: '',
+      spreadsheetId: ''
     },
     debug: {
       debugEnabled: false,
