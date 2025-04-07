@@ -1,0 +1,30 @@
+{
+  "name": "bid-info-downloader",
+  "version": "1.0.0",
+  "description": "Download bidding information PDFs from Iwate Prefecture using Playwright",
+  "main": "dist/getPDFs.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/getPDFs.js"
+  },
+  "keywords": [
+    "playwright",
+    "pdf",
+    "download",
+    "raspberry-pi"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "log4js": "^6.9.1",
+    "nodemailer": "^6.9.7",
+    "playwright-core": "^1.40.0",
+    "toml": "^3.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.9.0",
+    "@types/nodemailer": "^6.4.14",
+    "typescript": "^5.2.2"
+  }
+}
