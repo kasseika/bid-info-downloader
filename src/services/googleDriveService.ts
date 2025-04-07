@@ -91,7 +91,8 @@ export class GoogleDriveService {
         media: {
           body: fs.createReadStream(filePath)
         },
-        fields: 'id'
+        fields: 'id',
+        supportsAllDrives: true // 共有ドライブをサポート
       });
 
       const fileId = response.data.id || undefined;
@@ -102,13 +103,13 @@ export class GoogleDriveService {
         fileId,
         status: 'success'
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       errorLogger.error(`ファイル "${fileName}" のアップロードに失敗しました`, error);
       
       return {
         fileName,
         status: 'failed',
-        error: error.message || 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -137,12 +138,13 @@ export class GoogleDriveService {
           mimeType: 'application/vnd.google-apps.folder',
           parents: [folderId]
         },
-        fields: 'id'
+        fields: 'id',
+        supportsAllDrives: true // 共有ドライブをサポート
       });
 
-      const folderId = response.data.id || null;
-      systemLogger.info(`フォルダ "${folderName}" を作成しました (ID: ${folderId})`);
-      return folderId;
+      const newFolderId = response.data.id || null;
+      systemLogger.info(`フォルダ "${folderName}" を作成しました (ID: ${newFolderId})`);
+      return newFolderId;
     } catch (error) {
       errorLogger.error(`フォルダ "${folderName}" の作成に失敗しました`, error);
       return null;
@@ -205,7 +207,7 @@ export class GoogleDriveService {
     if (!folderId) {
       return filePaths.map(filePath => ({
         fileName: path.basename(filePath),
-        status: 'failed' as UploadStatus,
+        status: 'failed',
         error: 'Failed to create contract folder'
       }));
     }
