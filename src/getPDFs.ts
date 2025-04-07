@@ -272,15 +272,8 @@ const getPDFs = async (browser: Browser): Promise<void> => {
 
   text += `${today}のダウンロード結果\n\n`; // メール本文
 
-  // Configure download behavior
-  await page.context().route('**/*.pdf', route => {
-    route.continue();
-  });
-
-  // Set up download handler
-  page.on('download', download => {
-    console.log(`Download started: ${download.suggestedFilename()}`);
-  });
+  // No need to configure special download behavior with Playwright
+  // as it handles downloads automatically through events
 
   for (let i = 0; i < filteredContracts.length; i++) {
     // 業務名クリック → 発注情報閲覧へ移動
@@ -318,10 +311,15 @@ const getPDFs = async (browser: Browser): Promise<void> => {
       fs.mkdirSync(downloadPath, { recursive: true });
     }
 
-    // Set download path for this page context
+    // Set up context for this page
     const context = page.context();
-    await context.tracing.start({ screenshots: true, snapshots: true });
-    // Note: In Playwright, downloads are handled via events rather than setting a path directly
+    
+    // Enable tracing for debugging if needed
+    if (config.debug.debugEnabled) {
+      await context.tracing.start({ screenshots: true, snapshots: true });
+    }
+    
+    // Note: In Playwright, downloads are handled via events and saved using download.saveAs()
 
     type downloadPdf = {
       fileName: string;
@@ -352,7 +350,7 @@ const getPDFs = async (browser: Browser): Promise<void> => {
 
     const downloadNum = downloadPdfs.filter(downloadPdf => downloadPdf.enableDownload === true).length;
     let downloadedNum = 0;
-    let downloadFailedTimer: NodeJS.Timeout;
+    let downloadFailedTimer: NodeJS.Timeout | undefined;
     let downloaded: string[] = [];
     let notDownloaded: string[] = [];
 
@@ -368,25 +366,32 @@ const getPDFs = async (browser: Browser): Promise<void> => {
         
         // Create a promise for this download
         const downloadPromise = new Promise<void>(async (resolve) => {
-          // Set up download event listener for this specific download
-          const downloadListener = async (download: Download) => {
-            const path = await download.path();
-            if (path) {
-              console.log('download completed: ', download.suggestedFilename());
-              downloaded.push(download.suggestedFilename());
-              downloadedNum += 1;
-              
-              // Remove this listener after download completes
-              page.removeListener('download', downloadListener);
-              resolve();
-            }
-          };
-          
-          // Add the listener
-          page.on('download', downloadListener);
-          
-          // Click to start download
-          await frame.click(selector);
+          try {
+            // Start waiting for download before clicking
+            const downloadWaitPromise = page.waitForEvent('download');
+            
+            // Click to start download
+            await frame.click(selector);
+            
+            // Wait for the download to start
+            const download = await downloadWaitPromise;
+            const suggestedFilename = download.suggestedFilename();
+            console.log('Download started: ', suggestedFilename);
+            
+            // Create the full path where we want to save the file
+            const filePath = path.join(downloadPath, suggestedFilename);
+            
+            // Wait for the download to complete and save the file
+            await download.saveAs(filePath);
+            
+            console.log('Download completed and saved to: ', filePath);
+            downloaded.push(suggestedFilename);
+            downloadedNum += 1;
+            resolve();
+          } catch (error) {
+            console.error('Download failed: ', error);
+            resolve(); // Resolve anyway to continue with other downloads
+          }
         });
         
         downloadPromises.push(downloadPromise);
@@ -405,16 +410,27 @@ const getPDFs = async (browser: Browser): Promise<void> => {
 
     // Wait for all downloads to complete or timeout
     if (downloadPromises.length > 0) {
-      await Promise.race([
-        Promise.all(downloadPromises),
-        new Promise<void>((_, reject) => {
-          downloadFailedTimer = setTimeout(() => {
-            reject(new Error("download timed out"));
-          }, downloadTimeout);
-        }),
-      ]).finally(() => {
+      try {
+        await Promise.race([
+          Promise.all(downloadPromises),
+          new Promise<void>((_, reject) => {
+            downloadFailedTimer = setTimeout(() => {
+              reject(new Error("download timed out"));
+            }, downloadTimeout);
+          }),
+        ]);
+        console.log(`All downloads completed for contract: ${contractId}`);
+      } catch (error) {
+        console.error(`Download timeout or error for contract: ${contractId}`, error);
+        // Continue with the next contract even if some downloads failed
+      } finally {
         if (downloadFailedTimer) clearTimeout(downloadFailedTimer);
-      });
+        
+        // Stop tracing if it was started
+        if (config.debug.debugEnabled) {
+          await context.tracing.stop({ path: path.join(downloadPath, `trace-${contractId}.zip`) });
+        }
+      }
     }
 
     // ダウンロード履歴に追加
@@ -452,7 +468,11 @@ const getPDFs = async (browser: Browser): Promise<void> => {
   let browser: Browser | undefined;
   
   try {
-    const browserOptions = { ...launchOptions };
+    // Make sure we have download handling enabled in the browser options
+    const browserOptions = {
+      ...launchOptions,
+      acceptDownloads: true // Ensure downloads are accepted automatically
+    };
     
     if (config.debug.debugEnabled && typeof config.debug.headless === 'boolean') {
       browserOptions.headless = config.debug.headless;
