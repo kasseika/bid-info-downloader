@@ -165,6 +165,15 @@ this.sheets = google.sheets({ version: 'v4', auth });
   }
 
   /**
+   * フォルダのURLを取得
+   * @param folderId フォルダID
+   * @returns フォルダのURL
+   */
+  getFolderUrl(folderId: string): string {
+    return `https://drive.google.com/drive/folders/${folderId}`;
+  }
+
+  /**
    * 契約IDに対応するフォルダを作成
    * @param contractId 契約ID
    * @param contractName 契約名
@@ -237,7 +246,8 @@ this.sheets = google.sheets({ version: 'v4', auth });
         contractDetails.発注等級 || '',
         contractDetails.WTO条件付一般競争入札方式の型 || '',
         contractDetails.備考 || '',
-        contractDetails.課所名 || ''
+        contractDetails.課所名 || '',
+        contractDetails.公告資料 || '' // S列に公告資料のリンクを追加
       ];
 
       // 契約管理番号で重複チェック
@@ -257,7 +267,7 @@ this.sheets = google.sheets({ version: 'v4', auth });
         // 既存の行を更新
         await this.sheets.spreadsheets.values.update({
           spreadsheetId,
-          range: `${sheetName}!A${duplicateRow + 1}:R${duplicateRow + 1}`,
+          range: `${sheetName}!A${duplicateRow + 1}:S${duplicateRow + 1}`,
           valueInputOption: 'RAW',
           requestBody: {
             values: [rowData]
@@ -271,7 +281,7 @@ this.sheets = google.sheets({ version: 'v4', auth });
       // 新しい行を追加
       await this.sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: `${sheetName}!A:R`,
+        range: `${sheetName}!A:S`,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
@@ -297,7 +307,7 @@ this.sheets = google.sheets({ version: 'v4', auth });
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!A:R`
+        range: `${sheetName}!A:S`
       });
 
       return response.data.values || [];

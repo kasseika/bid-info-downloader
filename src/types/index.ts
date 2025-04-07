@@ -121,4 +121,5 @@ export type ContractDetails = {
   WTO条件付一般競争入札方式の型?: string;
   備考?: string;
   課所名?: string;
+  公告資料?: string; // Google Driveフォルダへのリンク
 };

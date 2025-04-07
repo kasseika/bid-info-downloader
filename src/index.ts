@@ -152,7 +152,7 @@ async function runDownloader(
     
     // 契約詳細ページへの移動
     await browserService.navigateToContractDetail(frame, contract.linkArg);
-    // 契約詳細情報を取得してコンソールに表示し、スプレッドシートに書き込む
+    // 契約詳細情報を取得してコンソールに表示
     const mainFrame = browserService.getMainFrame();
     const contractDetails = await getContractDetails(mainFrame, contract);
     
@@ -190,13 +190,23 @@ async function runDownloader(
         path.join(downloadPath, fileName)
       );
       
-      // Google Driveへのアップロード
-      const results = await googleDriveService.uploadContractFiles(
+      // 契約フォルダを作成し、PDFファイルをアップロード
+      // まず、フォルダIDを取得
+      const folderName = `${contract.contractId}_${contract.contractName}_${contract.sectionName}`;
+      const folderId = await googleDriveService.createContractFolder(
         contract.contractId,
         contract.contractName,
-        contract.sectionName,
-        filePaths
+        contract.sectionName
       );
+      
+      if (!folderId) {
+        systemLogger.error(`契約フォルダの作成に失敗しました: ${folderName}`);
+        continue;
+      }
+      
+      // ファイルをアップロード
+      const uploadPromises = filePaths.map(filePath => googleDriveService.uploadFile(filePath, folderId));
+      const results = await Promise.all(uploadPromises);
       
       // アップロード結果を履歴に追加
       historyManager.addUploadResults(contract.contractId, results);
@@ -208,6 +218,29 @@ async function runDownloader(
       const successCount = results.filter(r => r.status === 'success').length;
       const failedCount = results.filter(r => r.status === 'failed').length;
       systemLogger.info(`Google Driveへのアップロード結果: 成功=${successCount}, 失敗=${failedCount}`);
+      
+      // フォルダURLをスプレッドシートに書き込む
+      if (contractDetails && successCount > 0) {
+        // フォルダURLを設定（作成したフォルダIDを直接使用）
+        contractDetails.公告資料 = googleDriveService.getFolderUrl(folderId);
+        systemLogger.info(`契約フォルダのURLを設定しました: ${contractDetails.公告資料}`);
+        
+        // スプレッドシートに書き込み
+        const spreadsheetId = config.googleDrive.spreadsheetId;
+        if (spreadsheetId) {
+          const result = await googleDriveService.writeContractToSheet(
+            spreadsheetId,
+            'master',
+            contractDetails
+          );
+          
+          if (result) {
+            systemLogger.info('フォルダURLをスプレッドシートに書き込みました');
+          } else {
+            systemLogger.warn('フォルダURLのスプレッドシートへの書き込みに失敗しました');
+          }
+        }
+      }
     }
     
     // ログ出力

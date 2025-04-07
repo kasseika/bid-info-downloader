@@ -48,6 +48,9 @@ async function writeToSpreadsheet(contractDetails: ContractDetails): Promise<voi
       return;
     }
     
+    // 注意: フォルダの作成はここでは行わず、PDFアップロード時に行う
+    // フォルダURLの設定はindex.tsのrunDownloader関数内で行う
+    
     // masterシートに書き込み
     const result = await googleDriveService.writeContractToSheet(
       spreadsheetId,
