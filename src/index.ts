@@ -155,7 +155,6 @@ async function runDownloader(
     // 契約詳細情報を取得してコンソールに表示し、スプレッドシートに書き込む
     const mainFrame = browserService.getMainFrame();
     const contractDetails = await getContractDetails(mainFrame, contract);
-    await getContractDetails(mainFrame, contract);
     
     // ダウンロードディレクトリの作成
     const downloadPath = fileManager.createContractDirectory(
@@ -347,8 +346,18 @@ async function uploadExistingFiles() {
   }
 }
 
-// アプリケーションの実行
-main().catch(error => {
-  errorLogger.error('未処理のエラー:', error);
-  process.exit(1);
-});
+// コマンドライン引数に応じて実行する関数を選択
+const args = process.argv.slice(2);
+if (args.includes('--upload-only')) {
+  // アップロードのみ実行
+  uploadExistingFiles().catch(error => {
+    errorLogger.error('未処理のエラー:', error);
+    process.exit(1);
+  });
+} else {
+  // 通常の実行
+  main().catch(error => {
+    errorLogger.error('未処理のエラー:', error);
+    process.exit(1);
+  });
+}

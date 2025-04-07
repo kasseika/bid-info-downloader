@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "tsc && node dist/index.js",
     "dev": "tsc && node dist/index.js",
-    "upload": "tsc && node dist/uploadToDrive.js"
+    "upload": "tsc && node dist/index.js --upload-only"
   },
   "keywords": [
     "playwright",
