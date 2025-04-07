@@ -2,8 +2,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as toml from 'toml';
 import { LaunchOptions } from 'playwright-core';
+import { Config } from './types';
+import { stringToBoolean } from './utils/helpers';
 
-// Playwrightのlaunch オプション
+/**
+ * Playwrightのlaunch オプション
+ */
 const launchOptions: LaunchOptions = {
   headless: true,
   args: [
@@ -13,56 +17,32 @@ const launchOptions: LaunchOptions = {
   ]
 };
 
-// exeとnodeで実行パスを変える
+/**
+ * 実行パスの取得
+ * exeとnodeで実行パスを変える
+ */
 const executionPath = path.resolve(process.pkg ? path.dirname(process.execPath) : __dirname);
 
-/*
-  config
-*/
-
-type EmailConfig = {
-  sendEmailEnabled: boolean | string;
-  user: string;
-  pass: string;
-  to: string;
-};
-
-type DebugConfig = {
-  debugEnabled: boolean;
-  headless: boolean;
-};
-
-type Config = {
-  browserPath?: string;
-  topPage: string;
-  pdfKeywords: string[];
-  projectTitle: string;
-  downloadOnlyNew: boolean | string;
-  numberOfItems: 10 | 25 | 50 | 100;
-  fileCheckEnabled: boolean | string;
-  downloadTimeoutSec: number;
-  pdfClickDelaySec: number;
-  mail: EmailConfig;
-  debug: DebugConfig;
-};
-
+/**
+ * 設定ファイルの読み込み
+ */
 let config: Config;
 try {
-  config = toml.parse(fs.readFileSync(path.join(executionPath, 'config.toml'), 'utf8'));
+  // 設定ファイルを読み込む
+  const rawConfig = toml.parse(fs.readFileSync(path.join(executionPath, 'config.toml'), 'utf8'));
   
-  // 設定を文字列で記述した場合にbool値に変換する
-  if (typeof config.mail.sendEmailEnabled !== 'boolean') {
-    config.mail.sendEmailEnabled = (config.mail.sendEmailEnabled.toLowerCase() === 'true');
-  }
-
-  if (typeof config.downloadOnlyNew !== 'boolean') {
-    config.downloadOnlyNew = (config.downloadOnlyNew.toLowerCase() === 'true');
-  }
-
-  if (typeof config.fileCheckEnabled !== 'boolean') {
-    config.fileCheckEnabled = (config.fileCheckEnabled.toLowerCase() === 'true');
-  }
-
+  // 型変換を行う
+  config = {
+    ...rawConfig,
+    // 文字列で記述した場合にbool値に変換する
+    downloadOnlyNew: stringToBoolean(rawConfig.downloadOnlyNew),
+    fileCheckEnabled: stringToBoolean(rawConfig.fileCheckEnabled),
+    mail: {
+      ...rawConfig.mail,
+      sendEmailEnabled: stringToBoolean(rawConfig.mail.sendEmailEnabled)
+    }
+  } as Config;
+  
   // 表示件数の値が不正なときに100をセット
   const itemNumbers = [10, 25, 50, 100];
   if (!itemNumbers.includes(config.numberOfItems)) {

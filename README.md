@@ -64,6 +64,11 @@ cp config_example.toml config.toml
 - `pass`: GoogleのAppパスワード
 - `to`: 送信先メールアドレス
 
+デバッグ設定は、`[debug]` セクションで行います：
+
+- `debugEnabled`: デバッグモードを有効にするかどうか
+- `headless`: ヘッドレスモードを有効にするかどうか
+
 ## 使用方法
 
 1. ビルドします
@@ -76,6 +81,31 @@ npm run build
 
 ```bash
 npm start
+```
+
+開発モードで実行する場合（ビルドと実行を一度に行う）：
+
+```bash
+npm run dev
+```
+
+## プロジェクト構造
+
+```
+src/
+├── types/                  # 型定義
+│   └── index.ts            # すべての型定義
+├── services/               # 機能ごとのサービス
+│   ├── browserService.ts   # ブラウザ操作関連
+│   ├── downloaderService.ts # ダウンロード処理
+│   ├── fileManager.ts      # ファイル管理
+│   └── historyManager.ts   # ダウンロード履歴管理
+├── utils/                  # ユーティリティ関数
+│   └── helpers.ts          # 汎用ヘルパー関数
+├── config.ts               # 設定管理
+├── logger.ts               # ロギング
+├── mail.ts                 # メール送信
+└── index.ts                # エントリーポイント
 ```
 
 ## Raspberry Pi での自動実行設定
@@ -91,7 +121,7 @@ crontab -e
 2. 以下の行を追加します（例: 毎日午前9時に実行）
 
 ```
-0 9 * * * cd /path/to/bid-info-downloader && /usr/bin/node dist/getPDFs.js >> /path/to/bid-info-downloader/logs/cron.log 2>&1
+0 9 * * * cd /path/to/bid-info-downloader && /usr/bin/node dist/index.js >> /path/to/bid-info-downloader/logs/cron.log 2>&1
 ```
 
 ## ライセンス
