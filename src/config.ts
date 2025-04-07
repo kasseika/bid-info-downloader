@@ -46,17 +46,9 @@ try {
     },
     googleDrive: rawConfig.googleDrive ? {
       ...rawConfig.googleDrive,
-      uploadEnabled: stringToBoolean(rawConfig.googleDrive.uploadEnabled),
-      useServiceAccount: rawConfig.googleDrive.useServiceAccount !== undefined
-        ? stringToBoolean(rawConfig.googleDrive.useServiceAccount)
-        : false
+      uploadEnabled: stringToBoolean(rawConfig.googleDrive.uploadEnabled)
     } : {
       uploadEnabled: false,
-      useServiceAccount: false,
-      clientId: '',
-      clientSecret: '',
-      redirectUri: '',
-      refreshToken: '',
       serviceAccountKeyPath: '',
       folderId: ''
     }
@@ -94,11 +86,6 @@ try {
     },
     googleDrive: {
       uploadEnabled: false,
-      useServiceAccount: false,
-      clientId: '',
-      clientSecret: '',
-      redirectUri: '',
-      refreshToken: '',
       serviceAccountKeyPath: '',
       folderId: ''
     },

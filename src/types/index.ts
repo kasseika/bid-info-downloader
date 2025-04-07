@@ -13,15 +13,9 @@ export type EmailConfig = {
 
 export type GoogleDriveConfig = {
   uploadEnabled: boolean;
-  useServiceAccount: boolean;
-  // OAuth2認証用
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  refreshToken: string;
   // サービスアカウント認証用
   serviceAccountKeyPath: string;
-  // 共通
+  // アップロード先フォルダ
   folderId: string;
 };
 

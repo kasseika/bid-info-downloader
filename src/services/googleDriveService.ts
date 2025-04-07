@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { GoogleDriveConfig, UploadResult, UploadStatus } from '../types';
 import { errorLogger, systemLogger } from '../logger';
-import { JWT, OAuth2Client } from 'google-auth-library';
+import { JWT } from 'google-auth-library';
 
 /**
  * Google Driveサービス
@@ -21,42 +21,28 @@ export class GoogleDriveService {
   constructor(config: GoogleDriveConfig) {
     this.config = config;
 
-    // 認証方法に応じてGoogle Drive APIクライアントを初期化
-    let auth: OAuth2Client | JWT;
+    // サービスアカウントを使用してGoogle Drive APIクライアントを初期化
+    let auth: JWT;
 
-    if (this.config.useServiceAccount && this.config.serviceAccountKeyPath) {
-      try {
-        // サービスアカウント認証
-        systemLogger.info('サービスアカウントを使用してGoogle Driveに接続します');
-        
-        // サービスアカウントのキーファイルを読み込む
-        if (!fs.existsSync(this.config.serviceAccountKeyPath)) {
-          throw new Error(`サービスアカウントキーファイルが見つかりません: ${this.config.serviceAccountKeyPath}`);
-        }
-        
-        const keyFile = JSON.parse(fs.readFileSync(this.config.serviceAccountKeyPath, 'utf8'));
-        auth = new google.auth.JWT(
-          keyFile.client_email,
-          undefined,
-          keyFile.private_key,
-          ['https://www.googleapis.com/auth/drive']
-        );
-      } catch (error) {
-        errorLogger.error('サービスアカウント認証の初期化に失敗しました', error);
-        throw new Error('サービスアカウント認証の初期化に失敗しました: ' + (error as Error).message);
+    try {
+      // サービスアカウント認証
+      systemLogger.info('サービスアカウントを使用してGoogle Driveに接続します');
+      
+      // サービスアカウントのキーファイルを読み込む
+      if (!fs.existsSync(this.config.serviceAccountKeyPath)) {
+        throw new Error(`サービスアカウントキーファイルが見つかりません: ${this.config.serviceAccountKeyPath}`);
       }
-    } else {
-      // OAuth2認証
-      systemLogger.info('OAuth2を使用してGoogle Driveに接続します');
-      auth = new google.auth.OAuth2(
-        this.config.clientId,
-        this.config.clientSecret,
-        this.config.redirectUri
+      
+      const keyFile = JSON.parse(fs.readFileSync(this.config.serviceAccountKeyPath, 'utf8'));
+      auth = new google.auth.JWT(
+        keyFile.client_email,
+        undefined,
+        keyFile.private_key,
+        ['https://www.googleapis.com/auth/drive']
       );
-
-      auth.setCredentials({
-        refresh_token: this.config.refreshToken
-      });
+    } catch (error) {
+      errorLogger.error('サービスアカウント認証の初期化に失敗しました', error);
+      throw new Error('サービスアカウント認証の初期化に失敗しました: ' + (error as Error).message);
     }
 
     this.drive = google.drive({ version: 'v3', auth });
