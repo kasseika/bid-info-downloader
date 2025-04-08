@@ -146,7 +146,7 @@ async function runDownloader(
   // メール本文の初期化
   const today = new Date().toLocaleDateString();
   let emailText = `${today}のダウンロード結果\n\n`;
-  let uploadResults: { contractId: string; results: UploadResult[] }[] = [];
+  let uploadResults: { contractId: string; results: UploadResult[]; folderId: string | null }[] = [];
   
   // 各契約のPDFをダウンロード
   for (const contract of filteredContracts) {
@@ -214,7 +214,7 @@ async function runDownloader(
       historyManager.addUploadResults(contract.contractId, results);
       
       // アップロード結果を記録
-      uploadResults.push({ contractId: contract.contractId, results });
+      uploadResults.push({ contractId: contract.contractId, results, folderId });
       
       // アップロード結果のログ出力
       const successCount = results.filter(r => r.status === 'success').length;
@@ -270,11 +270,18 @@ async function runDownloader(
   if (uploadResults.length > 0) {
     emailText += '\n\n***** Google Driveへのアップロード結果 *****\n\n';
     
-    for (const { contractId, results } of uploadResults) {
+    for (const { contractId, results, folderId } of uploadResults) {
       const contract = historyManager.getHistory().find(c => c.contractId === contractId);
       if (!contract) continue;
       
       emailText += `${contract.contractName} (${contractId})\n`;
+      
+      // フォルダURLを追加
+      if (folderId && googleDriveService) {
+        const folderUrl = googleDriveService.getFolderUrl(folderId);
+        systemLogger.info(`通知に追加するフォルダURL: ${folderUrl}`);
+        emailText += `【フォルダURL】\n${folderUrl}\n\n`;
+      }
       
       const successFiles = results.filter(r => r.status === 'success');
       const failedFiles = results.filter(r => r.status === 'failed');
