@@ -93,9 +93,10 @@ export class FileManager {
 
   /**
    * 一定期間を経過した案件のデータを削除
+   * @param historyManager 履歴管理サービス
    * @returns 削除したディレクトリの数
    */
-  cleanupOldData(): number {
+  cleanupOldData(historyManager: { getHistory: () => DownloadResult[] }): number {
     if (!config.dataCleanup.enabled) {
       systemLogger.info('データクリーンアップ機能は無効になっています');
       return 0;
@@ -114,24 +115,44 @@ export class FileManager {
     let deletedCount = 0;
 
     try {
+      // ダウンロード履歴を取得
+      const history = historyManager.getHistory();
+      
       // dataディレクトリ内のすべてのフォルダを取得
       const files = fs.readdirSync(this.dataPath);
       const dirList = files.filter(file =>
         fs.statSync(path.join(this.dataPath, file)).isDirectory()
       );
 
-      // 各フォルダの最終更新日時をチェック
+      // 各フォルダの契約IDを取得し、履歴と照合
       for (const dirName of dirList) {
-        const dirPath = path.join(this.dataPath, dirName);
-        const stats = fs.statSync(dirPath);
+        // フォルダ名から契約IDを抽出（例: "123456_契約名_セクション名" → "123456"）
+        const contractId = dirName.split('_')[0];
+        const historyItem = history.find(item => item.contractId === contractId);
         
-        // 最終更新日時が保持期間より古い場合は削除
-        if (stats.mtime < cutoffDate) {
-          systemLogger.info(`古いデータを削除します: ${dirName} (最終更新日: ${stats.mtime.toLocaleDateString()})`);
+        if (historyItem && historyItem.downloadedAt) {
+          // ダウンロード日時を取得
+          const downloadDate = new Date(historyItem.downloadedAt);
           
-          // ディレクトリを再帰的に削除
-          fs.rmSync(dirPath, { recursive: true, force: true });
-          deletedCount++;
+          // ダウンロード日時が保持期間より古い場合は削除
+          if (downloadDate < cutoffDate) {
+            const dirPath = path.join(this.dataPath, dirName);
+            systemLogger.info(`古いデータを削除します: ${dirName} (ダウンロード日: ${downloadDate.toLocaleDateString()})`);
+            
+            // ディレクトリを再帰的に削除
+            fs.rmSync(dirPath, { recursive: true, force: true });
+            deletedCount++;
+          }
+        } else {
+          // 履歴に記録がない場合はファイルシステムの日時をフォールバックとして使用
+          const dirPath = path.join(this.dataPath, dirName);
+          const stats = fs.statSync(dirPath);
+          
+          if (stats.mtime < cutoffDate) {
+            systemLogger.info(`履歴に記録がないデータを削除します: ${dirName} (最終更新日: ${stats.mtime.toLocaleDateString()})`);
+            fs.rmSync(dirPath, { recursive: true, force: true });
+            deletedCount++;
+          }
         }
       }
 

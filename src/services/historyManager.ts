@@ -53,7 +53,12 @@ export class HistoryManager {
    * @param result ダウンロード結果
    */
   addToHistory(result: DownloadResult): void {
-    this.history.push(result);
+    // ダウンロード日時を追加
+    const resultWithTimestamp = {
+      ...result,
+      downloadedAt: new Date().toISOString()
+    };
+    this.history.push(resultWithTimestamp);
   }
 
   /**

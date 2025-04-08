@@ -90,6 +90,7 @@ export type DownloadResult = {
   downloaded: string[];
   notDownloaded: string[];
   uploaded?: UploadResult[];
+  downloadedAt?: string; // ISO形式の日時文字列
 };
 
 // ダウンロード失敗ファイルの型定義
