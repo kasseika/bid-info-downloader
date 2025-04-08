@@ -136,7 +136,14 @@ async function runDownloader(
     if (config.notification.enabled) {
       const today = new Date().toLocaleDateString();
       const subject = `岩手県入札情報DL結果(${today})`;
-      const text = "新規ダウンロードはありませんでした\n\n";
+      
+      // 絞り込み条件を含めた本文の作成
+      let text = "新規ダウンロードはありませんでした\n\n";
+      text += "【絞り込み条件】\n";
+      text += `・業務名: ${config.projectTitle ? config.projectTitle : "指定なし"}\n`;
+      text += `・新着のみ: ${config.downloadOnlyNew ? "はい" : "いいえ"}\n`;
+      text += `・PDFキーワード: ${config.pdfKeywords.join(", ")}\n\n`;
+      
       await sendNotification(subject, text);
     }
     
@@ -146,6 +153,12 @@ async function runDownloader(
   // メール本文の初期化
   const today = new Date().toLocaleDateString();
   let emailText = `${today}のダウンロード結果\n\n`;
+  
+  // 絞り込み条件の追加
+  emailText += "【絞り込み条件】\n";
+  emailText += `・業務名: ${config.projectTitle ? config.projectTitle : "指定なし"}\n`;
+  emailText += `・新着のみ: ${config.downloadOnlyNew ? "はい" : "いいえ"}\n`;
+  emailText += `・PDFキーワード: ${config.pdfKeywords.join(", ")}\n\n`;
   let uploadResults: { contractId: string; results: UploadResult[]; folderId: string | null }[] = [];
   
   // 各契約のPDFをダウンロード

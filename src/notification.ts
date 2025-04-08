@@ -82,7 +82,19 @@ export const sendErrorNotification = async (errorTitle: string, error: unknown):
     const subject = `【エラー】岩手県入札情報DL(${today}): ${errorTitle}`;
     
     // 本文の作成
-    const text = `${today}にエラーが発生しました\n\n${errorTitle}\n\n${errorMessage}`;
+    let text = `${today}にエラーが発生しました\n\n${errorTitle}\n\n${errorMessage}`;
+    
+    // 設定情報を追加
+    try {
+      const { config } = require('./config');
+      text += "\n\n【実行時の設定情報】\n";
+      text += `・業務名: ${config.projectTitle ? config.projectTitle : "指定なし"}\n`;
+      text += `・新着のみ: ${config.downloadOnlyNew ? "はい" : "いいえ"}\n`;
+      text += `・PDFキーワード: ${config.pdfKeywords.join(", ")}\n`;
+    } catch (configError) {
+      // 設定情報の取得に失敗した場合は追加しない
+      text += "\n\n【設定情報の取得に失敗しました】\n";
+    }
     
     // 通知の送信
     return await sendNotification(subject, text);
