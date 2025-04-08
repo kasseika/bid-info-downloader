@@ -4,12 +4,6 @@
  */
 
 // 設定関連の型定義
-export type EmailConfig = {
-  sendEmailEnabled: boolean;
-  user: string;
-  pass: string;
-  to: string;
-};
 
 // 通知関連の型定義
 export type NotificationConfig = {
@@ -43,7 +37,6 @@ export type Config = {
   fileCheckEnabled: boolean;
   downloadTimeoutSec: number;
   pdfClickDelaySec: number;
-  mail: EmailConfig;
   notification: NotificationConfig;
   googleDrive: GoogleDriveConfig;
   debug: DebugConfig;

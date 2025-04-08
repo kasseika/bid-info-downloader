@@ -40,10 +40,6 @@ try {
     // 文字列で記述した場合にbool値に変換する
     downloadOnlyNew: stringToBoolean(rawConfig.downloadOnlyNew),
     fileCheckEnabled: stringToBoolean(rawConfig.fileCheckEnabled),
-    mail: {
-      ...rawConfig.mail,
-      sendEmailEnabled: stringToBoolean(rawConfig.mail.sendEmailEnabled)
-    },
     notification: rawConfig.notification ? {
       ...rawConfig.notification,
       enabled: stringToBoolean(rawConfig.notification.enabled)
@@ -87,12 +83,6 @@ try {
     fileCheckEnabled: false,
     downloadTimeoutSec: 30,
     pdfClickDelaySec: 3,
-    mail: {
-      sendEmailEnabled: false,
-      user: "",
-      pass: "",
-      to: ""
-    },
     notification: {
       enabled: false,
       gasUrl: "",
