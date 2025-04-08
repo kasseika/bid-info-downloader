@@ -173,12 +173,13 @@ src/
 ├── gas/                    # Google Apps Script関連
 │   ├── notification.js     # 通知用GASスクリプト
 │   └── README.md           # GASの設定方法
+├── @types/                 # グローバル型定義
+│   └── global.d.ts         # グローバル型定義
 ├── config.ts               # 設定管理
 ├── getContractDetails.ts   # 契約詳細情報取得
 ├── index.ts                # エントリーポイント
 ├── logger.ts               # ロギング
-├── notification.ts         # 通知機能
-└── uploadToDrive.ts        # Google Driveアップロード
+└── notification.ts         # 通知機能
 ```
 
 ## 自動実行設定
