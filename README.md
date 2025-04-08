@@ -141,7 +141,7 @@ npm run build
 2. 実行します
 
 ```bash
-npm start
+npm run start
 ```
 
 開発モードで実行する場合（ビルドと実行を一度に行う）：
