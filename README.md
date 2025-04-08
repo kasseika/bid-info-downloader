@@ -1,20 +1,68 @@
 # 入札情報PDFダウンローダー (Bid Information PDF Downloader)
 
-岩手県入札情報公開サービスから特定の業務に関するPDFファイルを自動的にダウンロードするツールです。Raspberry Pi 3 (Raspbian)上で動作します。
+岩手県入札情報公開サービスから特定の業務に関するPDFファイルを自動的にダウンロードするツールです。
 
 ## 機能
 
 - 岩手県入札情報公開サービスから特定の業務名を含む案件を検索
 - 設定したキーワードを含むPDFファイルを自動ダウンロード
-- ダウンロード結果をメールで通知（オプション）
-- ダウンロードしたファイルをGoogle Driveにアップロード（オプション）
+- Google Apps Scriptを使用した通知機能（メールとGoogle Chatに対応）
+- ダウンロードしたファイルをGoogle Driveにアップロード
+- Google Spreadsheetへの案件情報の記録
 - ダウンロード履歴の管理
+
+## アーキテクチャ
+
+```mermaid
+graph TD
+    A[メインプロセス] --> B[BrowserService]
+    A --> C[FileManager]
+    A --> D[HistoryManager]
+    A --> E[GoogleDriveService]
+    
+    B --> F[ブラウザ操作]
+    B --> G[案件検索]
+    B --> H[PDFリンク取得]
+    
+    F --> I[Playwright]
+    
+    A --> J[DownloaderService]
+    J --> K[PDFダウンロード]
+    
+    C --> L[ファイル管理]
+    D --> M[履歴管理]
+    
+    E --> N[Google Drive API]
+    E --> O[Google Sheets API]
+    
+    A --> P[通知機能]
+    P --> Q[Google Apps Script]
+    
+    Q --> R[Gmail]
+    Q --> S[Google Chat]
+    
+    subgraph 外部システム
+        I
+        N
+        O
+        R
+        S
+    end
+    
+    subgraph データフロー
+        K --> L
+        L --> M
+        M --> E
+        E --> N
+        E --> O
+    end
+```
 
 ## 必要条件
 
-- Node.js (v14以上)
-- Raspberry Pi 3 (Raspbian)
+- Node.js (v16以上)
 - Chromium ブラウザ
+- インターネット接続
 
 ## インストール方法
 
@@ -31,7 +79,7 @@ cd bid-info-downloader
 npm install
 ```
 
-3. Playwrightのブラウザをインストールします（必要に応じて）
+3. Playwrightのブラウザをインストールします
 
 ```bash
 npx playwright install chromium
@@ -58,29 +106,24 @@ cp config_example.toml config.toml
 - `downloadTimeoutSec`: ダウンロードのタイムアウト時間（秒）
 - `pdfClickDelaySec`: PDFリンクのクリック間隔（秒）
 
-メール通知を使用する場合は、`[mail]` セクションで以下の設定を行います：
+### 通知設定
 
-- `sendEmailEnabled`: メール送信を有効にするかどうか
-- `user`: Gmailのユーザー名
-- `pass`: GoogleのAppパスワード
-- `to`: 送信先メールアドレス
+Google Apps Scriptを使用した通知機能を使用する場合は、`[notification]` セクションで以下の設定を行います：
+
+- `enabled`: 通知機能を有効にするかどうか
+- `gasUrl`: Google Apps ScriptのWebアプリURL
+- `apiKey`: APIキー（認証用）
+
+### Google Drive設定
 
 Google Driveへのアップロードを使用する場合は、`[googleDrive]` セクションで以下の設定を行います：
 
 - `uploadEnabled`: Google Driveへのアップロードを有効にするかどうか
-- `useServiceAccount`: サービスアカウントを使用するかどうか（推奨）
-
-サービスアカウントを使用する場合（`useServiceAccount = true`）：
 - `serviceAccountKeyPath`: サービスアカウントのキーファイル（JSON）のパス
-
-OAuth2認証を使用する場合（`useServiceAccount = false`）：
-- `clientId`: Google Cloud PlatformのクライアントID
-- `clientSecret`: Google Cloud Platformのクライアントシークレット
-- `redirectUri`: リダイレクトURI
-- `refreshToken`: リフレッシュトークン
-
-共通設定：
 - `folderId`: アップロード先のフォルダID
+- `spreadsheetId`: 案件情報を記録するスプレッドシートID（任意）
+
+### デバッグ設定
 
 デバッグ設定は、`[debug]` セクションで行います：
 
@@ -107,6 +150,12 @@ npm start
 npm run dev
 ```
 
+Google Driveへのアップロードのみを行う場合：
+
+```bash
+npm run upload
+```
+
 ## プロジェクト構造
 
 ```
@@ -121,14 +170,18 @@ src/
 │   └── googleDriveService.ts # Google Driveアップロード
 ├── utils/                  # ユーティリティ関数
 │   └── helpers.ts          # 汎用ヘルパー関数
+├── gas/                    # Google Apps Script関連
+│   ├── notification.js     # 通知用GASスクリプト
+│   └── README.md           # GASの設定方法
 ├── config.ts               # 設定管理
+├── getContractDetails.ts   # 契約詳細情報取得
+├── index.ts                # エントリーポイント
 ├── logger.ts               # ロギング
-├── mail.ts                 # メール送信
-├── uploadToDrive.ts        # Google Driveアップロード
-└── index.ts                # エントリーポイント
+├── notification.ts         # 通知機能
+└── uploadToDrive.ts        # Google Driveアップロード
 ```
 
-## Raspberry Pi での自動実行設定
+## 自動実行設定
 
 crontabを使用して定期的に実行するように設定できます：
 
@@ -144,23 +197,20 @@ crontab -e
 0 9 * * * cd /path/to/bid-info-downloader && /usr/bin/node dist/index.js >> /path/to/bid-info-downloader/logs/cron.log 2>&1
 ```
 
-## ライセンス
+## Google Apps Script通知機能の設定
 
-ISC
-
-## 注意事項
-
-- このツールは個人的な利用を目的としています
-- サーバーに過度な負荷をかけないようにご注意ください
+1. `src/gas/README.md` の手順に従ってGoogle Apps Scriptプロジェクトを作成します
+2. `src/gas/notification.js` のコードをGoogle Apps Scriptエディタにコピーします
+3. スクリプトプロパティを設定し、Webアプリとしてデプロイします
+4. デプロイURLとAPIキーを `config.toml` の `[notification]` セクションに設定します
 
 ## Google Driveサービスアカウントの設定方法
 
 1. [Google Cloud Console](https://console.cloud.google.com/)にアクセスし、プロジェクトを作成または選択します
 
-2. Google Drive APIを有効にします
+2. Google Drive APIとGoogle Sheets APIを有効にします
    - 「APIとサービス」→「ライブラリ」を選択
-   - 「Google Drive API」を検索して選択
-   - 「有効にする」をクリック
+   - 「Google Drive API」と「Google Sheets API」を検索して有効にする
 
 3. サービスアカウントを作成します
    - 「APIとサービス」→「認証情報」を選択
@@ -181,8 +231,21 @@ ISC
    - サービスアカウントのメールアドレス（キーファイル内の`client_email`）を入力
    - 「編集者」権限を付与して「送信」をクリック
 
-6. `config.toml`を設定します
+6. スプレッドシートを設定します（任意）
+   - Google Driveでスプレッドシートを作成または選択
+   - スプレッドシートを共有（上記と同様の手順）
+   - スプレッドシートIDを `config.toml` の `spreadsheetId` に設定
+
+7. `config.toml`を設定します
    - `uploadEnabled = true`に設定
-   - `useServiceAccount = true`に設定
    - `serviceAccountKeyPath`にダウンロードしたキーファイルのパスを設定
    - `folderId`にアップロード先のフォルダIDを設定（フォルダURLの末尾の部分）
+
+## ライセンス
+
+ISC
+
+## 注意事項
+
+- このツールは個人的な利用を目的としています
+- サーバーに過度な負荷をかけないようにご注意ください
