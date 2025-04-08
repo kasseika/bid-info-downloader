@@ -75,6 +75,12 @@ async function main() {
       systemLogger.info('Google Driveサービスを初期化しました');
     }
     
+    // 古いデータのクリーンアップ
+    if (config.dataCleanup.enabled) {
+      const deletedCount = fileManager.cleanupOldData();
+      systemLogger.info(`データクリーンアップ: ${deletedCount}件の古いデータを削除しました`);
+    }
+    
     // メイン処理の実行
     await runDownloader(browserService, fileManager, historyManager, googleDriveService);
   } catch (error) {

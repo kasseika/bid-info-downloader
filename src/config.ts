@@ -56,6 +56,14 @@ try {
       serviceAccountKeyPath: '',
       folderId: '',
       spreadsheetId: ''
+    },
+    dataCleanup: rawConfig.dataCleanup ? {
+      ...rawConfig.dataCleanup,
+      enabled: stringToBoolean(rawConfig.dataCleanup.enabled),
+      retentionDays: Number(rawConfig.dataCleanup.retentionDays) || 3
+    } : {
+      enabled: true,
+      retentionDays: 3
     }
   } as Config;
   
@@ -97,6 +105,10 @@ try {
     debug: {
       debugEnabled: false,
       headless: true
+    },
+    dataCleanup: {
+      enabled: true,
+      retentionDays: 3
     }
   };
 }

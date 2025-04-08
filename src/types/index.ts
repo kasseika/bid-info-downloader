@@ -27,6 +27,11 @@ export type DebugConfig = {
   headless: boolean;
 };
 
+export type DataCleanupConfig = {
+  enabled: boolean;
+  retentionDays: number;
+};
+
 export type Config = {
   browserPath?: string;
   topPage: string;
@@ -40,6 +45,7 @@ export type Config = {
   notification: NotificationConfig;
   googleDrive: GoogleDriveConfig;
   debug: DebugConfig;
+  dataCleanup: DataCleanupConfig;
 };
 
 // 契約情報の型定義

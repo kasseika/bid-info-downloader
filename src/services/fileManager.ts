@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FailedDownload, DownloadResult } from '../types';
 import { systemLogger } from '../logger';
+import { config } from '../config';
 
 /**
  * ファイル管理サービス
@@ -88,5 +89,57 @@ export class FileManager {
    */
   getDataPath(): string {
     return this.dataPath;
+  }
+
+  /**
+   * 一定期間を経過した案件のデータを削除
+   * @returns 削除したディレクトリの数
+   */
+  cleanupOldData(): number {
+    if (!config.dataCleanup.enabled) {
+      systemLogger.info('データクリーンアップ機能は無効になっています');
+      return 0;
+    }
+
+    const retentionDays = config.dataCleanup.retentionDays;
+    systemLogger.info(`${retentionDays}日より古いデータを削除します`);
+
+    // 現在の日時
+    const now = new Date();
+    // 保持期間（ミリ秒）
+    const retentionPeriod = retentionDays * 24 * 60 * 60 * 1000;
+    // 削除基準日時
+    const cutoffDate = new Date(now.getTime() - retentionPeriod);
+
+    let deletedCount = 0;
+
+    try {
+      // dataディレクトリ内のすべてのフォルダを取得
+      const files = fs.readdirSync(this.dataPath);
+      const dirList = files.filter(file =>
+        fs.statSync(path.join(this.dataPath, file)).isDirectory()
+      );
+
+      // 各フォルダの最終更新日時をチェック
+      for (const dirName of dirList) {
+        const dirPath = path.join(this.dataPath, dirName);
+        const stats = fs.statSync(dirPath);
+        
+        // 最終更新日時が保持期間より古い場合は削除
+        if (stats.mtime < cutoffDate) {
+          systemLogger.info(`古いデータを削除します: ${dirName} (最終更新日: ${stats.mtime.toLocaleDateString()})`);
+          
+          // ディレクトリを再帰的に削除
+          fs.rmSync(dirPath, { recursive: true, force: true });
+          deletedCount++;
+        }
+      }
+
+      systemLogger.info(`${deletedCount}件の古いデータを削除しました`);
+      return deletedCount;
+    } catch (error) {
+      systemLogger.error('データクリーンアップ中にエラーが発生しました:', error);
+      return 0;
+    }
   }
 }
