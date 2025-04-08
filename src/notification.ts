@@ -78,7 +78,7 @@ export const sendErrorNotification = async (errorTitle: string, error: unknown):
     }
 
     // 件名の作成
-    const today = new Date().toLocaleDateString();
+    const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const subject = `【エラー】岩手県入札情報DL(${today}): ${errorTitle}`;
     
     // 本文の作成

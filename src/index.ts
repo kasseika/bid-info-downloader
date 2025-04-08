@@ -134,7 +134,7 @@ async function runDownloader(
     
     // 通知送信
     if (config.notification.enabled) {
-      const today = new Date().toLocaleDateString();
+      const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
       const subject = `岩手県入札情報DL結果(${today})`;
       
       // 絞り込み条件を含めた本文の作成
@@ -151,7 +151,7 @@ async function runDownloader(
   }
   
   // メール本文の初期化
-  const today = new Date().toLocaleDateString();
+  const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
   let emailText = `${today}のダウンロード結果\n\n`;
   
   // 絞り込み条件の追加
