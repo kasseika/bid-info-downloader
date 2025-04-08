@@ -11,6 +11,13 @@ export type EmailConfig = {
   to: string;
 };
 
+// 通知関連の型定義
+export type NotificationConfig = {
+  enabled: boolean;
+  gasUrl: string;
+  apiKey: string;
+};
+
 export type GoogleDriveConfig = {
   uploadEnabled: boolean;
   // サービスアカウント認証用
@@ -37,6 +44,7 @@ export type Config = {
   downloadTimeoutSec: number;
   pdfClickDelaySec: number;
   mail: EmailConfig;
+  notification: NotificationConfig;
   googleDrive: GoogleDriveConfig;
   debug: DebugConfig;
 };

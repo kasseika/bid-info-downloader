@@ -44,6 +44,14 @@ try {
       ...rawConfig.mail,
       sendEmailEnabled: stringToBoolean(rawConfig.mail.sendEmailEnabled)
     },
+    notification: rawConfig.notification ? {
+      ...rawConfig.notification,
+      enabled: stringToBoolean(rawConfig.notification.enabled)
+    } : {
+      enabled: false,
+      gasUrl: '',
+      apiKey: ''
+    },
     googleDrive: rawConfig.googleDrive ? {
       ...rawConfig.googleDrive,
       uploadEnabled: stringToBoolean(rawConfig.googleDrive.uploadEnabled)
@@ -84,6 +92,11 @@ try {
       user: "",
       pass: "",
       to: ""
+    },
+    notification: {
+      enabled: false,
+      gasUrl: "",
+      apiKey: ""
     },
     googleDrive: {
       uploadEnabled: false,

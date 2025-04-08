@@ -4,7 +4,7 @@ import * as path from 'path';
 import { Contract, UploadResult } from './types';
 import { config, launchOptions, executionPath } from './config';
 import { systemLogger, errorLogger } from './logger';
-import { sendGmail } from './mail';
+import { sendNotification, sendErrorNotification } from './notification';
 import { getContractDetails } from './getContractDetails';
 import { BrowserService } from './services/browserService';
 import { DownloaderService } from './services/downloaderService';
@@ -79,6 +79,8 @@ async function main() {
     await runDownloader(browserService, fileManager, historyManager, googleDriveService);
   } catch (error) {
     errorLogger.error('致命的なエラー:', error);
+    // エラー通知の送信
+    await sendErrorNotification('致命的なエラー', error);
   } finally {
     // ブラウザの終了
     if (browser) {
@@ -130,12 +132,12 @@ async function runDownloader(
   if (!filteredContracts.length) {
     systemLogger.info('新規ダウンロードなし');
     
-    // メール送信
-    if (config.mail.sendEmailEnabled) {
+    // 通知送信
+    if (config.notification.enabled) {
       const today = new Date().toLocaleDateString();
       const subject = `岩手県入札情報DL結果(${today})`;
       const text = "新規ダウンロードはありませんでした\n\n";
-      await sendGmail(subject, text);
+      await sendNotification(subject, text);
     }
     
     return;
@@ -305,11 +307,10 @@ async function runDownloader(
       systemLogger.info('ダウンロードが正常に終了しました');
     }
   }
-  
-  // メール送信
-  if (config.mail.sendEmailEnabled) {
+  // 通知送信
+  if (config.notification.enabled) {
     const subject = `岩手県入札情報DL結果(${today})`;
-    await sendGmail(subject, emailText);
+    await sendNotification(subject, emailText);
   }
 }
 
@@ -376,6 +377,8 @@ async function uploadExistingFiles() {
     systemLogger.info('既存ファイルのアップロードが完了しました');
   } catch (error) {
     errorLogger.error('既存ファイルのアップロード中にエラーが発生しました:', error);
+    // エラー通知の送信
+    await sendErrorNotification('既存ファイルのアップロード中にエラーが発生', error);
   }
 }
 
@@ -383,14 +386,18 @@ async function uploadExistingFiles() {
 const args = process.argv.slice(2);
 if (args.includes('--upload-only')) {
   // アップロードのみ実行
-  uploadExistingFiles().catch(error => {
+  uploadExistingFiles().catch(async error => {
     errorLogger.error('未処理のエラー:', error);
+    // エラー通知の送信
+    await sendErrorNotification('アップロード処理中の未処理のエラー', error);
     process.exit(1);
   });
 } else {
   // 通常の実行
-  main().catch(error => {
+  main().catch(async error => {
     errorLogger.error('未処理のエラー:', error);
+    // エラー通知の送信
+    await sendErrorNotification('メイン処理中の未処理のエラー', error);
     process.exit(1);
   });
 }

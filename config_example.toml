@@ -33,12 +33,18 @@ fileCheckEnabled = false
 downloadTimeoutSec = 30                   # 案件ごとのダウンロードタイムアウト時間(秒)
 pdfClickDelaySec = 3                      # PDFリンクのクリックのスリープ時間 (秒)
 
-# Gmail送信機能設定
+# Gmail送信機能設定（非推奨：notification設定を使用してください）
 [mail]
 sendEmailEnabled = false                # メール送信をするかどうか (true or false)
 user = "example@gmail.com"              # Gamilのuser名(xxx@gmail.com)
 pass = "yourapppassword"                # GoogleのAppパスワード
 to = "example@gmail.com"                # 送信先メールアドレス(複数設定の例: "email1@example.com, email2@example.coom")
+
+# 通知機能設定（Google Apps Scriptへの送信）
+[notification]
+enabled = false                         # 通知機能を有効にする (true or false)
+gasUrl = "https://script.google.com/macros/s/your-gas-deployment-id/exec" # Google Apps ScriptのWebアプリURL
+apiKey = "your-api-key"                 # APIキー（認証用）
 
 # Google Drive設定
 [googleDrive]
