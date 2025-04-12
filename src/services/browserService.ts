@@ -45,17 +45,33 @@ export class BrowserService {
   
   /**
    * トップページに移動
-   * @returns 接続成功したかどうか
+   * @returns {Promise<{success: boolean, isServiceStopped: boolean}>} 接続結果とサービス停止状態
    */
-  async navigateToTopPage(): Promise<boolean> {
+  async navigateToTopPage(): Promise<{success: boolean, isServiceStopped: boolean}> {
     if (!this.page) throw new Error('ブラウザが初期化されていません');
     
     try {
       const response = await this.page.goto(config.topPage, { waitUntil: "domcontentloaded" });
-      return !!(response && response.ok());
+      
+      // レスポンスが正常かどうかを確認
+      const success = !!(response && response.ok());
+      
+      if (success) {
+        // サービス停止中かどうかを確認
+        const content = await this.page.content();
+        const isServiceStopped = content.includes('サービス停止中');
+        
+        if (isServiceStopped) {
+          systemLogger.warn('入札情報公開サービスは現在停止中です');
+        }
+        
+        return { success, isServiceStopped };
+      }
+      
+      return { success, isServiceStopped: false };
     } catch (error) {
       errorLogger.error('トップページへの移動に失敗しました', error);
-      return false;
+      return { success: false, isServiceStopped: false };
     }
   }
   

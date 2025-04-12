@@ -108,9 +108,37 @@ async function runDownloader(
   googleDriveService?: GoogleDriveService
 ) {
   // トップページへの移動
-  const topPageSuccess = await browserService.navigateToTopPage();
+  const { success: topPageSuccess, isServiceStopped } = await browserService.navigateToTopPage();
+  
+  // サービス停止中の場合は通知して終了
+  if (isServiceStopped) {
+    errorLogger.warn('入札情報公開サービスは現在停止中です');
+    
+    // 通知送信
+    if (config.notification.enabled) {
+      const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const subject = `【サービス停止中】岩手県入札情報DL(${today})`;
+      const text = `入札情報公開サービスは現在サービス停止中です。\n\n時間外や土日祝日などはサービスが停止しています。\n後ほど再度実行してください。`;
+      
+      await sendNotification(subject, text);
+    }
+    
+    return;
+  }
+  
+  // 接続失敗の場合
   if (!topPageSuccess) {
-    errorLogger.error('入札情報公開サービスに接続できませんでした');
+    const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const subject = `岩手県入札情報DL結果(${today})`;
+    systemLogger.info('入札情報公開サービスは現在サービス停止中です。');
+    // 絞り込み条件を含めた本文の作成
+    let text = "入札情報公開サービスは現在サービス停止中です。\n\n";
+    text += "【絞り込み条件】\n";
+    text += `・業務名: ${config.projectTitle ? config.projectTitle : "指定なし"}\n`;
+    text += `・新着のみ: ${config.downloadOnlyNew ? "はい" : "いいえ"}\n`;
+    text += `・PDFキーワード: ${config.pdfKeywords.join(", ")}\n\n`;
+    
+    await sendNotification(subject, text);
     return;
   }
   
